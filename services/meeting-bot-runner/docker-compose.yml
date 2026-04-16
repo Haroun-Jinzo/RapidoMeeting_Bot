@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  runner:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - UPLOAD_MEETING_URL=http://host.docker.internal:3000/upload-meeting      
+      # Choose one of:
+      # - SUPABASE_ACCESS_TOKEN=your_jwt
+      - BOT_INTERNAL_SECRET=sbp_ab3ae46817bec0bc5f0ec6ea526d3e039c4df298
+      - RECORDINGS_DIR=/tmp/recordings
+    volumes:
+      - ./.auth:/app/.auth
+      - ./recordings:/tmp/recordings
+    shm_size: 2g # Important for Chrome/Playwright
+    privileged: true
+    restart: unless-stopped
