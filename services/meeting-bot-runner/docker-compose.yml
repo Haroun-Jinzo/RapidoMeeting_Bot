@@ -8,9 +8,9 @@ services:
     environment:
       - UPLOAD_MEETING_URL=http://host.docker.internal:3000/upload-meeting      
       # Choose one of:
-      # - SUPABASE_ACCESS_TOKEN=your_jwt
-      - BOT_INTERNAL_SECRET=sbp_ab3ae46817bec0bc5f0ec6ea526d3e039c4df298
       - RECORDINGS_DIR=/tmp/recordings
+      - BOT_INTERNAL_SECRET=${BOT_INTERNAL_SECRET}
+      - SUPABASE_ACCESS_TOKEN=${SUPABASE_ACCESS_TOKEN}
     volumes:
       - ./.auth:/app/.auth
       - ./recordings:/tmp/recordings

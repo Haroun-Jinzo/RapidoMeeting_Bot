@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { v4 as uuidv4 } from "uuid";
 import fs from "fs";
 import path from "path";
@@ -8,9 +9,11 @@ import { startRecording, stopRecording } from "./recording/ffmpeg";
 import { uploadMeeting } from "./upload/uploadMeeting";
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || "0.0.0.0";
 const RECORDINGS_DIR = process.env.RECORDINGS_DIR || "/tmp/recordings";
 
 // Ensure recordings directory exists
@@ -101,7 +104,8 @@ async function processJob(jobId: string, metadata: any) {
        meeting_title: metadata.meeting_title,
        meeting_type: metadata.meeting_type,
        language: metadata.language,
-       participants: metadata.participants
+       participants: metadata.participants,
+       user_instructions: metadata.user_instructions
      });
 
      jobState.status = "completed";
@@ -117,6 +121,6 @@ async function processJob(jobId: string, metadata: any) {
   }
 }
 
-app.listen(PORT, () => {
-  console.log(`[Server] meeting-bot-runner listening on port ${PORT}`);
+app.listen(PORT as number, HOST, () => {
+  console.log(`[Server] meeting-bot-runner listening on ${HOST}:${PORT}`);
 });

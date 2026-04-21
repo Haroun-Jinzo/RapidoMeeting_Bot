@@ -37,7 +37,7 @@ RUN npm run build
 EXPOSE 3001
 
 ENV PULSE_SERVER=unix:/var/run/pulse/native
-ENV HOST=0.0.0.1
+ENV HOST=0.0.0.0
 ENV PORT=3001
 ENV RECORDINGS_DIR=/tmp/recordings
 

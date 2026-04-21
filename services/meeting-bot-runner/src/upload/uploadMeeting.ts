@@ -7,6 +7,7 @@ export interface Metadata {
   meeting_type: string;
   language: string;
   participants: string;
+  user_instructions?: string;
 }
 
 export async function uploadMeeting(filePath: string, metadata: Metadata) {
@@ -27,6 +28,9 @@ export async function uploadMeeting(filePath: string, metadata: Metadata) {
   formData.append("meeting_title", metadata.meeting_title || "Unknown Meeting");
   formData.append("meeting_type", metadata.meeting_type || "meeting");
   formData.append("language", metadata.language || "en");
+  if (metadata.user_instructions) {
+    formData.append("user_instructions", metadata.user_instructions);
+  }
   
   let participantsString = metadata.participants || "";
   if (Array.isArray(metadata.participants)) {
@@ -37,24 +41,33 @@ export async function uploadMeeting(filePath: string, metadata: Metadata) {
   try {
     const headers: Record<string, string> = { ...formData.getHeaders() };
     
+    // Crucial for some express/multer configurations to not hang
+    headers["Content-Length"] = await new Promise((resolve, reject) => {
+      formData.getLength((err, length) => {
+        if (err) reject(err);
+        else resolve(length.toString());
+      });
+    });
+
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     } else if (secret) {
       headers["X-Internal-Auth"] = secret;
     }
 
+    console.log(`[Upload] Starting upload to ${uploadUrl}...`);
     const response = await axios.post(uploadUrl, formData, {
       headers,
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
+      timeout: 30000, // 30 seconds timeout to catch hanging requests
     });
-
-    console.log(`[Upload] Upload successful: ${response.status}`, response.data);
+    console.log(`[Upload] Upload completed successfully with status ${response.status}`);
     return response.data;
   } catch (error: any) {
-    console.error("[Upload Error]: Uploading meeting failed", error.message);
+    console.error("[Upload Error]:", error?.message || error);
     if (error.response) {
-      console.error("[Upload Error]: Response body:", error.response.data);
+      console.error("[Upload Error Response]:", error.response.data);
     }
     throw error;
   }

@@ -48,12 +48,22 @@ export function stopRecording(processHandle: ChildProcess): Promise<void> {
   return new Promise((resolve, reject) => {
     console.log(`[FFmpeg] Stopping recording (PID: ${processHandle.pid})...`);
     
+    const timeoutId = setTimeout(() => {
+      if (!processHandle.killed) {
+        console.warn(`[FFmpeg] Force killing process ${processHandle.pid}...`);
+        processHandle.kill("SIGKILL");
+        resolve(); // resolve anyway
+      }
+    }, 5000);
+
     processHandle.on("close", () => {
       console.log(`[FFmpeg] Recording stopped gracefully.`);
+      clearTimeout(timeoutId);
       resolve();
     });
 
     processHandle.on("error", (err) => {
+      clearTimeout(timeoutId);
       reject(err);
     });
 
@@ -64,14 +74,5 @@ export function stopRecording(processHandle: ChildProcess): Promise<void> {
     } else {
       processHandle.kill("SIGINT");
     }
-    
-    // Fallback: If it doesn't close after 5 seconds, force kill
-    setTimeout(() => {
-      if (!processHandle.killed) {
-        console.warn(`[FFmpeg] Force killing process ${processHandle.pid}...`);
-        processHandle.kill("SIGKILL");
-        resolve(); // resolve anyway
-      }
-    }, 5000);
   });
 }
