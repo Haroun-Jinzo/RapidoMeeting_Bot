@@ -77,12 +77,12 @@ export class GoogleMeetDriver implements ProviderDriver {
 
       // Look for the "Use microphone and camera" vs "Continue without microphone and camera" dialog unconditionally
       console.log("[GoogleMeet] Checking for microphone dialogs...");
-      const continueWithoutMicBtn = this.page.locator(
-        'button:has-text("Continuer sans micro"), ' +
-        'span:has-text("Continuer sans micro"), ' +
-        'button:has-text("Continue without"), ' +
+      const continueWithoutMicBtn = this.page.locator([
+        'button:has-text("Continuer sans micro")',
+        'span:has-text("Continuer sans micro")',
+        'button:has-text("Continue without")',
         'span:has-text("Continue without")'
-      ).locator('visible=true').first();
+      ].join(', ')).filter({ visible: true }).first();
 
       if (await continueWithoutMicBtn.isVisible({ timeout: 5000 })) {
           console.log("[GoogleMeet] Dismissing microphone/camera popup before join...");
@@ -98,13 +98,19 @@ export class GoogleMeetDriver implements ProviderDriver {
 
       // Use a pure CSS selector fallback designed for the prominent blue joining button
       // Look explicitly for visible Join buttons to avoid hidden/disabled templates (Google Meet has many).
-      const joinButton = this.page.locator(
-        'button:has-text("Join now"), ' +
-        'button:has-text("Ask to join"), ' +
-        'button:has-text("ask to join"), ' +
-        'button:has-text("Participer"), ' +
-        'button:has-text("Demander")'
-      ).locator('visible=true').first();
+      const joinButton = this.page.locator([
+        'button:has-text("Join now")',
+        'button:has-text("Ask to join")',
+        'button:has-text("ask to join")',
+        'button:has-text("Participer")',
+        'button:has-text("Demander")',
+        'button:has-text("Join")',
+        'span:has-text("Join")',
+        'span:has-text("Participer à la réunion")',
+        'span:has-text("Demander à participer")',
+        'button:has-text("Demander à participer")',
+        'span:has-text("Ask to join")'
+      ].join(', ')).filter({ visible: true }).first();
       
       // Wait for it to become visible and enabled naturally
       await joinButton.waitFor({ timeout: 15000, state: 'visible' });
@@ -116,12 +122,12 @@ export class GoogleMeetDriver implements ProviderDriver {
       await this.page.waitForTimeout(3000); // 3 seconds after clicking
 
       // The microphone popup sometimes appears AFTER hitting join (especially on instant joins with no lobby check)
-      const postJoinMicBtn = this.page.locator(
-        'button:has-text("Continuer sans micro"), ' +
-        'span:has-text("Continuer sans micro"), ' +
-        'button:has-text("Continue without"), ' +
+      const postJoinMicBtn = this.page.locator([
+        'button:has-text("Continuer sans micro")',
+        'span:has-text("Continuer sans micro")',
+        'button:has-text("Continue without")',
         'span:has-text("Continue without")'
-      ).locator('visible=true').first();
+      ].join(', ')).filter({ visible: true }).first();
 
       if (await postJoinMicBtn.isVisible({ timeout: 3000 })) {
           console.log("[GoogleMeet] Dismissing microphone/camera popup after join...");
@@ -207,8 +213,13 @@ export class GoogleMeetDriver implements ProviderDriver {
            const leaveBtnCount = await this.page.locator('[aria-label="Leave call"], [aria-label="Quitter l\'appel"]').count();
            const leaveBtnVisible = leaveBtnCount > 0 && await this.page.locator('[aria-label="Leave call"], [aria-label="Quitter l\'appel"]').first().isVisible();
 
-           if (leftMeeting || returnHome || returnHomeEn || rejoinBtn || removedText || !leaveBtnVisible) {
-             console.log(`[GoogleMeet] Meeting ended (UI returned ${!leaveBtnVisible ? 'no leave button' : 'end-screen text'}).`);
+           // Check if the bot is the only one left in the meeting
+           const isAloneEn = await this.page.locator('text="You\'re the only one here"').isVisible();
+           const isAloneFr = await this.page.locator('text="Vous êtes la seule personne ici"').isVisible();
+           const isAloneFr2 = await this.page.locator('text="Vous êtes le seul participant"').isVisible();
+
+           if (leftMeeting || returnHome || returnHomeEn || rejoinBtn || removedText || !leaveBtnVisible || isAloneEn || isAloneFr || isAloneFr2) {
+             console.log(`[GoogleMeet] Meeting ended (UI returned ${!leaveBtnVisible ? 'no leave button' : 'end-screen text or bot is alone'}).`);
              clearInterval(interval);
              clearTimeout(hardTimeout);
              resolve();

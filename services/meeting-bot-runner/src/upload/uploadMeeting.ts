@@ -8,6 +8,7 @@ export interface Metadata {
   language: string;
   participants: string;
   user_instructions?: string;
+  userId?: string;
 }
 
 export async function uploadMeeting(filePath: string, metadata: Metadata) {
@@ -49,18 +50,23 @@ export async function uploadMeeting(filePath: string, metadata: Metadata) {
       });
     });
 
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    } else if (secret) {
+    // Prefer an internal secret header for service-to-service calls when available
+    if (secret) {
       headers["X-Internal-Auth"] = secret;
+      if (metadata.userId) {
+        headers["x-internal-user-id"] = metadata.userId;
+      }
+    } else if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
     }
-
+    
+    console.log("user instruction" + metadata.user_instructions);
     console.log(`[Upload] Starting upload to ${uploadUrl}...`);
     const response = await axios.post(uploadUrl, formData, {
       headers,
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
-      timeout: 30000, // 30 seconds timeout to catch hanging requests
+      timeout: 300000, // 5 minutes: allow slower backend processing/uploads
     });
     console.log(`[Upload] Upload completed successfully with status ${response.status}`);
     return response.data;
@@ -69,6 +75,11 @@ export async function uploadMeeting(filePath: string, metadata: Metadata) {
     if (error.response) {
       console.error("[Upload Error Response]:", error.response.data);
     }
-    throw error;
+    // Do NOT throw: ensure the bot runner finishes the job even if Main Backend fails.
+    return {
+      error: error?.message || String(error),
+      status: error?.response?.status,
+      response: error?.response?.data,
+    };
   }
 }

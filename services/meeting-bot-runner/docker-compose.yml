@@ -10,10 +10,17 @@ services:
       # Choose one of:
       - RECORDINGS_DIR=/tmp/recordings
       - BOT_INTERNAL_SECRET=${BOT_INTERNAL_SECRET}
+      - INTERNAL_INGEST_SECRET=${BOT_INTERNAL_SECRET}
       - SUPABASE_ACCESS_TOKEN=${SUPABASE_ACCESS_TOKEN}
     volumes:
       - ./.auth:/app/.auth
       - ./recordings:/tmp/recordings
+    secrets:
+      - internal_ingest_secret
     shm_size: 2g # Important for Chrome/Playwright
     privileged: true
     restart: unless-stopped
+
+secrets:
+  internal_ingest_secret:
+    file: ./secrets/internal_ingest_secret.txt

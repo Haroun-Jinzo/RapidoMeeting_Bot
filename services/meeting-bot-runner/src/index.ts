@@ -1,3 +1,4 @@
+import './loadInternalSecret';
 import express from "express";
 import cors from "cors";
 import { v4 as uuidv4 } from "uuid";
@@ -105,9 +106,9 @@ async function processJob(jobId: string, metadata: any) {
        meeting_type: metadata.meeting_type,
        language: metadata.language,
        participants: metadata.participants,
-       user_instructions: metadata.user_instructions
+       user_instructions: metadata.user_instructions,
+       userId: metadata.userId
      });
-
      jobState.status = "completed";
      jobState.backendResponse = response;
 

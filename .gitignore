@@ -45,3 +45,4 @@ recordings/
 .Trashes
 ehthumbs.db
 Thumbs.db
+services/**/secrets
