@@ -3,6 +3,33 @@ import { ProviderDriver } from "./index";
 import path from "path";
 import fs from "fs";
 
+const GOOGLE_SIGN_IN_ERROR =
+  "Google session expired or missing. The bot was redirected to the Google sign-in page. " +
+  "Re-run `npm run setup-auth` in services/meeting-bot-runner, log in fully, then restart the runner.";
+
+async function assertNotOnGoogleSignIn(page: Page, debugDir: string): Promise<void> {
+  const url = page.url();
+  const onAccountsHost = /accounts\.google\.com/i.test(url);
+
+  const signInVisible = await page
+    .locator([
+      'text="Choose an account"',
+      'text="Choisir un compte"',
+      'text="Sign in"',
+      'text="Connexion"',
+      'input[type="email"]',
+      'input[name="identifier"]',
+    ].join(", "))
+    .first()
+    .isVisible()
+    .catch(() => false);
+
+  if (onAccountsHost || signInVisible) {
+    await page.screenshot({ path: path.join(debugDir, "debug_auth_required.png") });
+    throw new Error(GOOGLE_SIGN_IN_ERROR);
+  }
+}
+
 export class GoogleMeetDriver implements ProviderDriver {
   private context: BrowserContext | null = null;
   private page: Page | null = null;
@@ -48,6 +75,8 @@ async join(meetingUrl: string): Promise<void> {
   console.log(`[GoogleMeet] Navigating to meeting URL directly...`);
   await this.page.goto(meetingUrl, { waitUntil: "domcontentloaded" });
   console.log(`[GoogleMeet] Navigated to ${meetingUrl}`);
+
+  await assertNotOnGoogleSignIn(this.page, debugDir);
 
   // Step 1: Wait for the page to show something meaningful
   console.log(`[GoogleMeet] Waiting for page to be ready...`);
@@ -130,6 +159,7 @@ async join(meetingUrl: string): Promise<void> {
 
   // Step 5: Click join button
   try {
+    await assertNotOnGoogleSignIn(this.page, debugDir);
     await this.page.screenshot({ path: path.join(debugDir, 'debug2_before_join.png') });
 
     const joinButton = this.page.locator([

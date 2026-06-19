@@ -52,9 +52,22 @@ Response:
 curl http://localhost:3000/jobs/<jobId>
 ```
 
+The job response includes `logs`, `progress`, `session_id`, and `status` phases (`joining` → `recording` → `uploading` → `processing` → `completed`). After upload, the bot subscribes to the backend SSE pipeline (`GET /sessions/:id/progress`) and mirrors the same `[Pipeline]` step logs as the main backend (transcription, extraction, routing, etc.) in the runner console and in `logs`.
+
 ## Auth / Cookies
-The bot mounts a persistent context in `./.auth/google`. If Google meets require authentication (e.g. for non-anonymous accounts), run playwright locally without headless mode and login once:
-`npx playwright open --user-data-dir=./.auth/google https://meet.google.com`
+Google Meet often requires a signed-in Google account. The bot loads saved cookies from `./.auth/state.json` (mounted into the container at `/app/.auth/state.json`).
+
+To set up or refresh the session:
+
+```bash
+cd services/meeting-bot-runner
+npm install
+npm run setup-auth
+```
+
+A browser window opens — log in fully (password + 2FA if prompted) and wait until you reach your Google account home page. The script saves `state.json` and exits.
+
+If the bot fails with a sign-in error, re-run `setup-auth`. Google sessions expire periodically.
 
 ## Extensibility
 - **Adding more providers:** Check `src/providers/index.ts` and implement `ProviderDriver`. Register your new provider inside `src/index.ts`.
@@ -64,11 +77,8 @@ The bot mounts a persistent context in `./.auth/google`. If Google meets require
 Google Meet often blocks anonymous users (not logged into a Google Account) from joining meetings depending on how the organization is set up. **If your bot gets a "You can't join this video call" screen**, it means it was rejected by Google before even typing its name.
 
 To fix this:
-1. Open `docker-compose.yml`.
-2. Add your new bot email strictly to `GOOGLE_BOT_EMAIL` and `GOOGLE_BOT_PASSWORD`.
-3. Stop and rebuild your docker container `docker-compose down` / `docker-compose up --build`.
-
-When those variables exist, the browser will programmatically navigate to accounts.google.com and log itself in safely and organically before joining a meeting without needing Windows browser magic!
+1. Run `npm run setup-auth` and log the bot into a dedicated Google account.
+2. Restart the runner: `docker-compose down && docker-compose up --build`.
 
 ## Known Limitations
 - Heavy CPU usage: Transcoding audio locally using `ffmpeg` + memory requirements of running Playwright browsers will require at least 1-2 vCPUs and ~2GB RAM per concurrent meeting.

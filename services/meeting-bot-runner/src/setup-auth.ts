@@ -36,21 +36,38 @@ async function setupAuth() {
 
   console.log("\n========================================================");
   console.log("   WAITING FOR YOU TO LOG IN...");
-  console.log("   DO NOT PRESS CTRL+C OR CLOSE THE TERMINAL!");
-  console.log("   The script will save cookies and close in 60 seconds.");
+  console.log("   1. Pick your bot account and complete sign-in (password + 2FA).");
+  console.log("   2. Wait until you see your Google account home page.");
+  console.log("   DO NOT close the browser until the script finishes.");
   console.log("========================================================\n");
 
-  // Save cookies every 5 seconds for 60 seconds
-  for (let i = 0; i < 12; i++) {
-    await page.waitForTimeout(5000);
-    try {
-      await context.storageState({ path: AUTH_FILE });
-      console.log(`[Auth Setup] [${(i + 1) * 5}s] Saved cookies to ${AUTH_FILE}`);
-    } catch (e) {
-      console.warn(`[Auth Setup] Could not save cookies yet:`, e);
+  const deadline = Date.now() + 5 * 60 * 1000; // 5 minutes max
+  let loggedIn = false;
+
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(3000);
+
+    const url = page.url();
+    const onSignInPage = /accounts\.google\.com\/(signin|v3\/signin|AccountChooser)/i.test(url);
+    const chooseAccount = await page.locator('text="Choose an account", text="Choisir un compte"').isVisible().catch(() => false);
+    const signedOut = await page.locator('text="Signed out", text="Déconnecté"').isVisible().catch(() => false);
+
+    if (!onSignInPage && !chooseAccount && !signedOut) {
+      loggedIn = true;
+      break;
     }
+
+    console.log(`[Auth Setup] Still waiting for login... (current page: ${url})`);
   }
 
+  if (!loggedIn) {
+    console.error("[Auth Setup] Timed out waiting for login. No auth file was saved.");
+    await browser.close();
+    process.exit(1);
+  }
+
+  await context.storageState({ path: AUTH_FILE });
+  console.log(`[Auth Setup] Login detected. Saved session to ${AUTH_FILE}`);
   console.log(`[Auth Setup] Done! Closing browser.`);
   await browser.close();
 }

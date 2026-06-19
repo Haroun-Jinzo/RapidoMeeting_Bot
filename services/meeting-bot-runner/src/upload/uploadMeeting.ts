@@ -60,15 +60,20 @@ export async function uploadMeeting(filePath: string, metadata: Metadata) {
       headers["Authorization"] = `Bearer ${token}`;
     }
     
-    console.log("user instruction" + metadata.user_instructions);
     console.log(`[Upload] Starting upload to ${uploadUrl}...`);
     const response = await axios.post(uploadUrl, formData, {
       headers,
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
-      timeout: 300000, // 5 minutes: allow slower backend processing/uploads
+      timeout: 300000,
+      validateStatus: (status) => status >= 200 && status < 300,
     });
-    console.log(`[Upload] Upload completed successfully with status ${response.status}`);
+
+    const sessionId = response.data?.session_id || response.data?.sessionId;
+    console.log(
+      `[Upload] Upload accepted with status ${response.status}` +
+        (sessionId ? ` — session ${sessionId}` : ""),
+    );
     return response.data;
   } catch (error: any) {
     console.error("[Upload Error]:", error?.message || error);
